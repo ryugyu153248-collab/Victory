@@ -2,6 +2,7 @@
   "name": "quest-lines-app",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Quest Lines — English learning RPG (static frontend + one serverless API function)",
   "scripts": {
     "dev": "echo \"For local testing, run: vercel dev\" && exit 0"

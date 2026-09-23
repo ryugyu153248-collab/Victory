@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#5c3a20">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Quest Lines — English RPG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-top:#2c3e6b; --sky-bottom:#7a5aa0;
+    --wood-dark:#3a2415; --wood:#5c3a20; --wood-light:#7a4f2b;
+    --gold:#e8c15a; --gold-dark:#a87f2e; --gold-bright:#ffe9a8;
+    --stone:#4d5a63; --stone-light:#69777f; --stone-dark:#333c42;
+    --parchment:#f2e6c9; --parchment-ink:#3a2f1e;
+    --ink:#fbf3df; --ink-dim:#cbb98f;
+    --hp:#4caf50; --hp-bg:#20331f; --hp-low:#d1483a;
+    --mp:#3aa0d1; --mp-bg:#152a3a;
+    --enemy:#d1483a; --enemy-bg:#3a1414;
+    --gem-blue:#3ea6c9; --gem-purple:#8a5fd1; --gem-green:#4fbf7a;
+    --correct:#4caf50; --wrong:#d1483a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(255,233,168,.15), transparent 60%),
+      linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 55%, #2a1f33 100%);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    padding:20px 12px 50px;
+  }
+  .pixel{font-family:'Press Start 2P', monospace;}
+  .wrap{max-width:480px;margin:0 auto;}
+
+  /* ---------- shared panel look ---------- */
+  .frame{
+    position:relative;
+    background:linear-gradient(180deg, var(--wood-light), var(--wood) 40%, var(--wood-dark));
+    border:3px solid var(--gold-dark);
+    border-radius:10px;
+    padding:16px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.06);
+  }
+  .frame::before, .frame::after{
+    content:"";
+    position:absolute; width:12px; height:12px; border-radius:3px;
+    background:var(--gem-purple); top:-6px; left:-6px;
+    box-shadow: 0 0 6px var(--gem-purple);
+  }
+  .frame::after{ left:auto; right:-6px; background:var(--gem-blue); box-shadow:0 0 6px var(--gem-blue);}
+
+  .stone-panel{
+    background:linear-gradient(180deg, var(--stone-light), var(--stone) 60%, var(--stone-dark));
+    border:3px solid #8a97a0;
+    border-radius:10px;
+    padding:16px;
+    box-shadow: 0 5px 0 rgba(0,0,0,.35);
+  }
+
+  .plank-btn{
+    display:block; width:100%; text-align:left; cursor:pointer;
+    background:linear-gradient(180deg, var(--wood-light), var(--wood));
+    border:2px solid var(--gold-dark);
+    border-radius:8px;
+    padding:14px 16px;
+    color:var(--ink);
+    font-family:inherit;
+    box-shadow: 0 4px 0 rgba(0,0,0,.35);
+    margin-bottom:12px;
+    transition: transform .08s ease;
+  }
+  .plank-btn:active{ transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,.35);}
+  .plank-btn:disabled{opacity:.5; cursor:default;}
+  .plank-btn .row{display:flex; align-items:center; gap:12px;}
+  .plank-btn .icon{font-size:26px; width:34px; text-align:center;}
+  .plank-btn .title{font-size:15.5px; font-weight:700; color:var(--gold-bright); margin-bottom:2px;}
+  .plank-btn .sub{font-size:12.5px; color:var(--ink-dim);}
+  .plank-btn .tag{
+    margin-left:auto; font-size:10px; padding:3px 8px; border-radius:20px;
+    background:var(--gem-green); color:#0c2b17; font-weight:700; white-space:nowrap;
+  }
+
+  /* ---------- header / player card ---------- */
+  .player-card{display:flex; align-items:center; gap:14px; margin-bottom:16px;}
+  .avatar-ring{
+    width:64px; height:64px; border-radius:50%; flex:none;
+    background:radial-gradient(circle at 35% 30%, #fff6d8, var(--gold) 55%, var(--gold-dark));
+    border:3px solid var(--gold-bright);
+    display:flex; align-items:center; justify-content:center; font-size:32px;
+    box-shadow:0 0 0 3px var(--wood-dark), 0 3px 6px rgba(0,0,0,.4);
+  }
+  .player-info .name{font-size:14px; font-weight:700; color:var(--gold-bright);}
+  .player-info .meta{font-size:12px; color:var(--ink-dim); margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;}
+  .player-info .meta b{color:var(--ink);}
+  .xp-track{height:8px; border-radius:4px; background:rgba(0,0,0,.4); margin-top:6px; width:150px; overflow:hidden; border:1px solid var(--gold-dark);}
+  .xp-fill{height:100%; background:linear-gradient(90deg,#ffe9a8,var(--gold)); transition:width .4s;}
+
+  /* ---------- bars ---------- */
+  .bar-label{display:flex; justify-content:space-between; font-size:10.5px; margin-bottom:3px; color:var(--ink-dim);}
+  .bar-track{height:14px; border-radius:7px; background:rgba(0,0,0,.45); border:2px solid var(--gold-dark); overflow:hidden;}
+  .bar-fill{height:100%; transition:width .35s ease;}
+  .bar-fill.hp{background:linear-gradient(180deg,#8ee08f,var(--hp));}
+  .bar-fill.hp.low{background:linear-gradient(180deg,#ef8c81,var(--hp-low));}
+  .bar-fill.mp{background:linear-gradient(180deg,#8fd3f0,var(--mp));}
+  .bar-fill.enemy{background:linear-gradient(180deg,#ef8c81,var(--enemy));}
+  .bar-fill.timer{background:linear-gradient(90deg,var(--gold),var(--gold-bright));}
+
+  /* ---------- bottom nav ---------- */
+  .bottom-nav{display:flex; justify-content:space-around; margin-top:18px;}
+  .nav-btn{
+    background:radial-gradient(circle at 35% 30%, var(--wood-light), var(--wood));
+    border:2px solid var(--gold-dark); border-radius:50%;
+    width:52px; height:52px; display:flex; align-items:center; justify-content:center;
+    font-size:22px; cursor:pointer; position:relative;
+  }
+  .nav-btn span.label{
+    position:absolute; bottom:-16px; font-size:9px; color:var(--ink-dim); white-space:nowrap;
+    left:50%; transform:translateX(-50%);
+  }
+
+  /* ---------- headings ---------- */
+  h2.section-title{
+    font-size:14px; color:var(--gold-bright); margin:0 0 14px; text-align:center; letter-spacing:.02em;
+  }
+  .back-link{
+    background:none; border:none; color:var(--ink-dim); cursor:pointer;
+    font-family:inherit; font-size:12.5px; margin-bottom:10px; padding:0;
+  }
+  .back-link:hover{color:var(--gold-bright);}
+
+  /* ---------- choice buttons (setup/theme/level) ---------- */
+  .choice-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+  .choice-chip{
+    flex:1 1 auto; min-width:90px; text-align:center;
+    border:2px solid var(--gold-dark); background:rgba(0,0,0,.25); color:var(--ink);
+    padding:10px 8px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px;
+  }
+  .choice-chip.selected{ background:var(--gold); color:#3a2a0d; font-weight:700; }
+  .choice-chip small{display:block; opacity:.75; font-size:10.5px; margin-top:2px;}
+
+  .primary-btn{
+    width:100%; padding:14px; border:2px solid var(--gold-bright); border-radius:8px;
+    background:linear-gradient(180deg,#ffe9a8,var(--gold) 60%, var(--gold-dark));
+    color:#3a2a0d; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit;
+    box-shadow:0 4px 0 rgba(0,0,0,.35);
+  }
+  .primary-btn:disabled{opacity:.55; cursor:default;}
+  .primary-btn:active{transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,.35);}
+
+  .ghost-btn{
+    width:100%; padding:11px; border:2px solid var(--stone-light); border-radius:8px;
+    background:transparent; color:var(--ink); font-family:inherit; font-size:13px; cursor:pointer;
+    margin-top:8px;
+  }
+
+  /* ---------- scene / story ---------- */
+  .scene-art{
+    width:100%; aspect-ratio:16/9; border-radius:8px; overflow:hidden;
+    background:#0d0b08; border:2px solid var(--gold-dark); margin-bottom:14px;
+  }
+  .scene-art canvas{width:100%; height:100%; display:block; image-rendering:pixelated;}
+  .scene-art.placeholder{display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--ink-dim); font-family:'IBM Plex Sans Thai';}
+  .scene-text{
+    font-family:'Fraunces',serif; font-size:17.5px; line-height:1.6; white-space:pre-wrap; color:var(--ink);
+    background:rgba(0,0,0,.22); border-radius:8px; padding:14px; margin-bottom:14px;
+  }
+  .opt-btn{
+    display:block; width:100%; text-align:left; margin-bottom:9px;
+    background:rgba(0,0,0,.22); border:2px solid var(--gold-dark); color:var(--ink);
+    padding:12px 14px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:14.5px;
+  }
+  .opt-btn .letter{
+    display:inline-block; width:20px; height:20px; line-height:20px; text-align:center;
+    border-radius:50%; border:1.5px solid var(--gold); color:var(--gold-bright);
+    font-size:11px; font-weight:700; margin-right:9px; font-family:'IBM Plex Sans Thai';
+  }
+  .opt-btn:disabled{opacity:.45;}
+  .free-input-row{display:flex; gap:8px;}
+  .free-input-row input{
+    flex:1; padding:11px 13px; border:2px solid var(--gold-dark); border-radius:8px;
+    background:rgba(0,0,0,.3); color:var(--ink); font-family:inherit; font-size:14px;
+  }
+  .free-input-row input::placeholder{color:var(--ink-dim);}
+  .free-input-row button{
+    padding:0 16px; border:none; border-radius:8px; background:var(--gem-green);
+    color:#0c2b17; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+
+  .helper-card{
+    background:var(--parchment); color:var(--parchment-ink); border-radius:8px;
+    padding:14px 16px; font-size:13px; margin-top:14px; border:2px solid var(--gold-dark);
+  }
+  .helper-card h3{margin:0 0 8px; font-size:11px; color:var(--wood);}
+  .vocab-list{list-style:none; margin:0; padding:0; display:grid; gap:5px;}
+  .vocab-list li{display:flex; gap:8px;}
+  .vocab-list b{font-family:'IBM Plex Mono',monospace; min-width:100px;}
+  .correction-box{
+    margin-top:12px; padding:10px 12px; border-radius:6px; background:rgba(63,107,82,.15);
+    border-left:3px solid var(--gem-green); font-size:13px; line-height:1.5;
+  }
+
+  .status-row{display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-dim); margin:8px 0 14px;}
+  .spinner{width:13px; height:13px; border-radius:50%; border:2px solid rgba(255,255,255,.25); border-top-color:var(--gold); animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .error-box{
+    background:rgba(209,72,58,.18); border:2px solid var(--wrong); color:#ffd6d0;
+    padding:11px 13px; border-radius:8px; font-size:13px; margin-bottom:14px;
+  }
+  .error-box button{margin-top:8px; background:var(--wrong); color:#fff; border:none; padding:7px 13px; border-radius:6px; cursor:pointer; font-family:inherit;}
+
+  /* ---------- battle ---------- */
+  .vs-row{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:10px;}
+  .fighter{flex:1;}
+  .fighter .who{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+  .fighter .avatar-sm{
+    width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:20px; background:radial-gradient(circle at 35% 30%, #fff6d8, var(--gold) 55%, var(--gold-dark));
+    border:2px solid var(--gold-bright); flex:none;
+  }
+  .fighter.enemy .avatar-sm{background:#0d0b08; border-color:var(--enemy);}
+  .fighter .name{font-size:11.5px; font-weight:700;}
+  .monster-art{width:100%; aspect-ratio:16/9; border-radius:8px; overflow:hidden; background:#0d0b08; border:2px solid var(--enemy); margin-bottom:14px;}
+  .monster-art canvas{width:100%;height:100%;display:block; image-rendering:pixelated;}
+
+  .q-card{background:var(--parchment); color:var(--parchment-ink); border-radius:10px; padding:16px; border:2px solid var(--gold-dark); margin-bottom:14px;}
+  .q-card .q-counter{font-size:10.5px; color:var(--wood); font-weight:700; margin-bottom:6px;}
+  .q-card .q-prompt{font-size:15.5px; font-weight:600; line-height:1.45; margin-bottom:4px;}
+  .timer-track{height:6px; border-radius:3px; background:rgba(0,0,0,.15); overflow:hidden; margin:10px 0 2px;}
+
+  .answer-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+  @media (max-width:400px){ .answer-grid{grid-template-columns:1fr;} }
+  .answer-card{
+    background:var(--parchment); border:2px solid var(--wood); border-radius:9px; padding:11px 10px;
+    cursor:pointer; text-align:left; font-family:inherit; color:var(--parchment-ink);
+  }
+  .answer-card .aword{font-weight:700; font-size:14.5px;}
+  .answer-card .apron{font-size:11px; opacity:.65; font-style:italic;}
+  .answer-card .athai{font-size:12.5px; margin-top:3px; color:var(--wood);}
+  .answer-card.correct{background:#cdeecb; border-color:var(--correct);}
+  .answer-card.wrong{background:#f4cec9; border-color:var(--wrong);}
+  .answer-card:disabled{cursor:default;}
+
+  .battle-result{text-align:center; padding:20px 10px;}
+  .battle-result .big-emoji{font-size:46px; margin-bottom:8px;}
+  .battle-result h3{font-size:16px; color:var(--gold-bright); margin:0 0 6px;}
+  .reward-row{display:flex; justify-content:center; gap:16px; font-size:13px; margin:12px 0 18px; color:var(--ink-dim);}
+  .reward-row b{color:var(--gold-bright);}
+
+  /* ---------- lesson library ---------- */
+  .word-card{
+    background:rgba(0,0,0,.22); border:2px solid var(--gold-dark); border-radius:8px;
+    padding:12px 14px; margin-bottom:9px; cursor:pointer;
+  }
+  .word-card .front{display:flex; justify-content:space-between; align-items:center;}
+  .word-card .w{font-weight:700; font-size:15px;}
+  .word-card .count{font-size:10.5px; color:var(--ink-dim);}
+  .word-card .thai{font-size:13.5px; color:var(--gold-bright); margin-top:6px; display:none;}
+  .word-card.flipped .thai{display:block;}
+  .empty-note{text-align:center; color:var(--ink-dim); font-size:13px; padding:30px 10px;}
+
+  /* ---------- achievements ---------- */
+  .ach-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .ach-card{
+    border-radius:9px; padding:12px; text-align:center; border:2px solid var(--stone-light);
+    background:rgba(0,0,0,.25);
+  }
+  .ach-card.unlocked{border-color:var(--gold); background:rgba(232,193,90,.14);}
+  .ach-card .ico{font-size:26px; margin-bottom:6px; filter:grayscale(1); opacity:.4;}
+  .ach-card.unlocked .ico{filter:none; opacity:1;}
+  .ach-card .an{font-size:12px; font-weight:700; margin-bottom:3px;}
+  .ach-card .ad{font-size:10.5px; color:var(--ink-dim); line-height:1.4;}
+
+  /* ---------- shop ---------- */
+  .shop-item{display:flex; align-items:center; gap:12px; background:rgba(0,0,0,.22); border:2px solid var(--gold-dark); border-radius:9px; padding:11px 13px; margin-bottom:9px;}
+  .shop-item .ico{font-size:26px; width:36px; text-align:center;}
+  .shop-item .info{flex:1;}
+  .shop-item .info .n{font-weight:700; font-size:13.5px;}
+  .shop-item .info .p{font-size:11.5px; color:var(--ink-dim);}
+  .shop-item button{
+    border:2px solid var(--gold-dark); background:var(--gold); color:#3a2a0d; font-weight:700;
+    border-radius:7px; padding:7px 12px; cursor:pointer; font-family:inherit; font-size:12px;
+  }
+  .shop-item button:disabled{opacity:.4; cursor:default;}
+  .shop-item button.owned{background:transparent; color:var(--ink-dim); border-color:var(--stone-light);}
+
+  /* ---------- settings ---------- */
+  .setting-row{margin-bottom:16px;}
+  .setting-row .lbl{font-size:12.5px; color:var(--ink-dim); margin-bottom:8px; display:block;}
+  .setting-row input[type=range]{width:100%;}
+  .danger-btn{
+    width:100%; padding:11px; border:2px solid var(--wrong); border-radius:8px;
+    background:rgba(209,72,58,.15); color:#ffd6d0; font-family:inherit; font-size:13px; cursor:pointer;
+  }
+
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background:var(--wood-dark); border:2px solid var(--gold); color:var(--ink);
+    padding:10px 18px; border-radius:20px; font-size:13px; box-shadow:0 4px 12px rgba(0,0,0,.4);
+    z-index:50; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+
+  footer{text-align:center; font-size:10.5px; opacity:.4; margin-top:26px; color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+<footer>Quest Lines · English RPG Trainer · ขับเคลื่อนด้วย Claude</footer>
+
+<script>
+/* ============================== CONSTANTS ============================== */
+const SAVE_KEY = 'questlines_save_v1';
+const AVATARS_FREE = ['🧙‍♀️','🧙‍♂️','🗡️'];
+const AVATARS_SHOP = [
+  { id:'archer', emoji:'🏹', name:'นักธนู', cost:150 },
+  { id:'knight', emoji:'🛡️', name:'อัศวิน', cost:250 },
+  { id:'hero',   emoji:'🦸', name:'ฮีโร่ในตำนาน', cost:400 },
+];
+const THEMES = [
+  { id:'fantasy', label:'แฟนตาซี', sub:'Fantasy' },
+  { id:'mystery', label:'สืบสวน', sub:'Mystery' },
+  { id:'survival', label:'เอาชีวิตรอด', sub:'Survival' },
+];
+const CEFR_LEVELS = [
+  { id:'A2', name:'Beginner', desc:'คำศัพท์พื้นฐาน' },
+  { id:'B1', name:'Intermediate', desc:'คำศัพท์ทั่วไป' },
+  { id:'B2', name:'Advanced', desc:'คำศัพท์และสำนวนขั้นสูง' },
+];
+const ACHIEVEMENTS = [
+  { id:'first_step', ico:'👣', name:'First Step', desc:'เริ่มผจญภัยครั้งแรกในโหมด Story', check:s=>s.stats.scenesPlayed>=1 },
+  { id:'wordsmith_10', ico:'📖', name:'Wordsmith', desc:'เรียนรู้คำศัพท์ครบ 10 คำ', check:s=>Object.keys(s.vocab).length>=10 },
+  { id:'wordsmith_30', ico:'📚', name:'Lexicon Master', desc:'เรียนรู้คำศัพท์ครบ 30 คำ', check:s=>Object.keys(s.vocab).length>=30 },
+  { id:'first_win', ico:'⚔️', name:'Monster Slayer', desc:'ชนะการต่อสู้ครั้งแรก', check:s=>s.stats.battlesWon>=1 },
+  { id:'win_5', ico:'🐉', name:'Veteran', desc:'ชนะการต่อสู้ 5 ครั้ง', check:s=>s.stats.battlesWon>=5 },
+  { id:'challenge_3', ico:'⏱️', name:'Quick Thinker', desc:'ผ่านโหมด Timed Trial 3 ครั้ง', check:s=>s.stats.challengesCompleted>=3 },
+  { id:'level_5', ico:'⭐', name:'Rising Hero', desc:'มีเลเวลถึง 5', check:s=>s.level>=5 },
+  { id:'rich', ico:'💰', name:'Treasure Hunter', desc:'สะสมทองได้ 500', check:s=>s.gold>=500 },
+];
+const PIXEL_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/* ============================== SAVE / STATE ============================== */
+function defaultSave(){
+  return {
+    onboarded:false, name:'Traveler', avatar:'🧙‍♀️', ownedAvatars:['🧙‍♀️','🧙‍♂️','🗡️'],
+    cefr:'B1', sfxVolume:70,
+    level:1, xp:0, xpToNext:100, gold:20,
+    vocab:{}, achievements:{},
+    stats:{ scenesPlayed:0, battlesWon:0, wordsLearned:0, challengesCompleted:0 },
+  };
+}
+function loadSave(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return defaultSave();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultSave(), parsed);
+  }catch(e){ return defaultSave(); }
+}
+function persist(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
+}
+let save = loadSave();
+
+function addXp(n){
+  save.xp += n;
+  let leveled = false;
+  while(save.xp >= save.xpToNext){
+    save.xp -= save.xpToNext;
+    save.level += 1;
+    save.xpToNext = Math.round(save.xpToNext * 1.25);
+    leveled = true;
+  }
+  persist();
+  return leveled;
+}
+function addGold(n){ save.gold += n; persist(); }
+function learnWord(word, thai){
+  if(!word) return;
+  const key = word.trim().toLowerCase();
+  if(!key) return;
+  if(!save.vocab[key]) save.vocab[key] = { word: word.trim(), thai: thai||'', count:0 };
+  save.vocab[key].count += 1;
+  if(thai) save.vocab[key].thai = thai;
+  persist();
+}
+function checkAchievements(){
+  const newly = [];
+  ACHIEVEMENTS.forEach(a=>{
+    if(!save.achievements[a.id] && a.check(save)){
+      save.achievements[a.id] = Date.now();
+      newly.push(a);
+    }
+  });
+  if(newly.length) persist();
+  return newly;
+}
+
+/* ============================== SOUND ============================== */
+let audioCtx = null;
+function beep(freq, dur, type){
+  if(save.sfxVolume <= 0) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = audioCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    const vol = (save.sfxVolume/100) * 0.12;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + dur);
+  }catch(e){}
+}
+const sfx = {
+  click: ()=>beep(320,0.06,'square'),
+  correct: ()=>{ beep(520,0.09,'square'); setTimeout(()=>beep(780,0.12,'square'),90); },
+  wrong: ()=>beep(140,0.22,'sawtooth'),
+  victory: ()=>{ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.16,'square'), i*110)); },
+  defeat: ()=>{ [400,340,280,220].forEach((f,i)=>setTimeout(()=>beep(f,0.2,'sawtooth'), i*140)); },
+  coin: ()=>beep(900,0.08,'square'),
+};
+
+/* ============================== TOAST ============================== */
+let toastTimer=null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ============================== PIXEL ART ============================== */
+function validatePixelArt(raw){
+  if(!raw || typeof raw !== 'object') return null;
+  let { width, height, palette, rows } = raw;
+  width = parseInt(width,10); height = parseInt(height,10);
+  if(!Number.isFinite(width) || !Number.isFinite(height)) return null;
+  if(width<8||width>64||height<8||height>64) return null;
+  if(!Array.isArray(palette)||palette.length===0||palette.length>36) return null;
+  if(!palette.every(c=>typeof c==='string' && /^#[0-9a-fA-F]{3,8}$/.test(c.trim()))) return null;
+  if(!Array.isArray(rows)||rows.length<height) return null;
+  const clean=[];
+  for(let y=0;y<height;y++){
+    let row = String(rows[y]||'');
+    if(row.length<width) row = row.padEnd(width, PIXEL_CHARSET[0]);
+    clean.push(row.slice(0,width));
+  }
+  return { width, height, palette: palette.map(c=>c.trim()), rows: clean };
+}
+function drawPixelArt(canvas, art){
+  if(!canvas || !art) return;
+  canvas.width = art.width; canvas.height = art.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,art.width,art.height);
+  for(let y=0;y<art.height;y++){
+    const row = art.rows[y];
+    for(let x=0;x<art.width;x++){
+      const ch = (row[x]||'0').toUpperCase();
+      const idx = PIXEL_CHARSET.indexOf(ch);
+      const color = art.palette[idx>=0?idx:0];
+      if(!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(x,y,1,1);
+    }
+  }
+}
+
+/* ============================== CLAUDE API (via your own backend) ============================== */
+async function callClaude(turns){
+  let res;
+  try{
+    res = await fetch('/api/claude', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ turns })
+    });
+  }catch(e){
+    throw { code:'network_error' };
+  }
+  let data;
+  try{ data = await res.json(); }catch(e){ throw { code:'invalid_json' }; }
+  if(!res.ok){
+    throw { code: data.code || 'server_error', message: data.error };
+  }
+  return data;
+}
+function errorCopy(e){
+  const code = e && e.code;
+  switch(code){
+    case 'network_error': return 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';
+    case 'server_error': return 'เซิร์ฟเวอร์มีปัญหา (ตรวจสอบว่าตั้งค่า ANTHROPIC_API_KEY แล้ว) กรุณาลองใหม่';
+    case 'rate_limited': return 'มีการเรียกใช้งานถี่เกินไป กรุณารอสักครู่แล้วลองใหม่';
+    case 'invalid_json': return 'ได้รับข้อมูลรูปแบบไม่ถูกต้อง กรุณาลองใหม่';
+    default: return 'เกิดข้อผิดพลาดบางอย่าง กรุณาลองใหม่อีกครั้ง';
+  }
+}
+
+/* ============================== APP STATE / ROUTER ============================== */
+const ui = {
+  screen: save.onboarded ? 'menu' : 'onboarding',
+  onboard: { name:'', avatar: AVATARS_FREE[0], cefr:'B1' },
+  storySetup: { theme: THEMES[0].id },
+  story: { turns:[], scene:null, loading:false, streaming:'', error:null, freeText:'', pending:null },
+  battle: { mode:'combat', loading:false, streaming:'', error:null, data:null,
+            qIndex:0, playerHp:100, playerMaxHp:100, monsterHp:100, monsterMaxHp:100,
+            answered:null, correctCount:0, finished:false, timerLeft:0, timerHandle:null,
+            xpEarned:0, goldEarned:0 },
+  lesson: { flipped:new Set() },
+};
+
+function render(){
+  const app = document.getElementById('app');
+  switch(ui.screen){
+    case 'onboarding': app.innerHTML = renderOnboarding(); wireOnboarding(); break;
+    case 'menu': app.innerHTML = renderMenu(); wireMenu(); break;
+    case 'story-setup': app.innerHTML = renderStorySetup(); wireStorySetup(); break;
+    case 'story-play': app.innerHTML = renderStoryPlay(); wireStoryPlay(); break;
+    case 'battle': app.innerHTML = renderBattle(); wireBattle(); break;
+    case 'lesson': app.innerHTML = renderLesson(); wireLesson(); break;
+    case 'achievements': app.innerHTML = renderAchievements(); wireBack(); break;
+    case 'shop': app.innerHTML = renderShop(); wireShop(); break;
+    case 'profile': app.innerHTML = renderProfile(); wireProfile(); break;
+    case 'settings': app.innerHTML = renderSettings(); wireSettings(); break;
+  }
+}
+function esc(str){
+  if(str===undefined||str===null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function goto(screen){ ui.screen = screen; render(); }
+
+/* ============================== ONBOARDING ============================== */
+function renderOnboarding(){
+  const avatarChips = AVATARS_FREE.map(a=>`
+    <button class="choice-chip ${ui.onboard.avatar===a?'selected':''}" data-avatar="${a}" style="font-size:22px;">${a}</button>
+  `).join('');
+  const levelChips = CEFR_LEVELS.map(l=>`
+    <button class="choice-chip ${ui.onboard.cefr===l.id?'selected':''}" data-cefr="${l.id}">${l.id}<small>${l.name}</small></button>
+  `).join('');
+  return `
+    <div class="frame">
+      <h2 class="section-title pixel" style="font-size:12px;">⚔ QUEST LINES ⚔</h2>
+      <p style="text-align:center; color:var(--ink-dim); font-size:13px; margin-top:-6px;">ผจญภัยฝึกภาษาอังกฤษของคุณเริ่มต้นที่นี่</p>
+
+      <label style="font-size:12.5px; color:var(--ink-dim); display:block; margin:14px 0 8px;">ตั้งชื่อตัวละครของคุณ</label>
+      <div class="free-input-row" style="margin-bottom:16px;">
+        <input id="nameInput" type="text" placeholder="เช่น Elysian" maxlength="16" value="${esc(ui.onboard.name)}" />
+      </div>
+
+      <label style="font-size:12.5px; color:var(--ink-dim); display:block; margin-bottom:8px;">เลือกตัวละคร</label>
+      <div class="choice-row">${avatarChips}</div>
+
+      <label style="font-size:12.5px; color:var(--ink-dim); display:block; margin-bottom:8px;">เลือกระดับภาษาอังกฤษ</label>
+      <div class="choice-row">${levelChips}</div>
+
+      <button class="primary-btn" id="beginBtn">▶ เริ่มการผจญภัย</button>
+    </div>
+  `;
+}
+function wireOnboarding(){
+  document.getElementById('nameInput').oninput = e=>{ ui.onboard.name = e.target.value; };
+  document.querySelectorAll('[data-avatar]').forEach(b=>b.onclick=()=>{ ui.onboard.avatar=b.dataset.avatar; render(); });
+  document.querySelectorAll('[data-cefr]').forEach(b=>b.onclick=()=>{ ui.onboard.cefr=b.dataset.cefr; render(); });
+  document.getElementById('beginBtn').onclick = ()=>{
+    sfx.click();
+    save.name = (ui.onboard.name||'Traveler').trim() || 'Traveler';
+    save.avatar = ui.onboard.avatar;
+    save.cefr = ui.onboard.cefr;
+    save.onboarded = true;
+    persist();
+    goto('menu');
+  };
+}
+
+/* ============================== MENU ============================== */
+function renderMenu(){
+  const xpPct = Math.min(100, Math.round((save.xp/save.xpToNext)*100));
+  return `
+    <div class="frame">
+      <div class="player-card">
+        <div class="avatar-ring">${save.avatar}</div>
+        <div class="player-info">
+          <div class="name pixel" style="font-size:11px;">${esc(save.name.toUpperCase())}</div>
+          <div class="meta"><span>Lvl <b>${save.level}</b></span><span>💰 <b>${save.gold}</b></span><span>🎯 ${save.cefr}</span></div>
+          <div class="xp-track"><div class="xp-fill" style="width:${xpPct}%"></div></div>
+        </div>
+      </div>
+
+      <button class="plank-btn" id="btnStory">
+        <div class="row"><div class="icon">📖</div>
+          <div><div class="title">STORY</div><div class="sub">ผจญภัยในเนื้อเรื่อง เลือกทางเดินเอง</div></div>
+        </div>
+      </button>
+
+      <button class="plank-btn" id="btnCombat">
+        <div class="row"><div class="icon">⚔️</div>
+          <div><div class="title">COMBAT MODE</div><div class="sub">ต่อสู้มอนสเตอร์ด้วยคำศัพท์</div></div>
+          <div class="tag">NEW</div>
+        </div>
+      </button>
+
+      <button class="plank-btn" id="btnChallenge">
+        <div class="row"><div class="icon">⏱️</div>
+          <div><div class="title">CHALLENGE MODE</div><div class="sub">ทดสอบความไวภายในเวลาจำกัด</div></div>
+        </div>
+      </button>
+
+      <button class="plank-btn" id="btnLesson">
+        <div class="row"><div class="icon">📚</div>
+          <div><div class="title">LESSON MODE</div><div class="sub">คลังคำศัพท์ที่คุณเคยเจอ (${Object.keys(save.vocab).length} คำ)</div></div>
+        </div>
+      </button>
+
+      <div class="bottom-nav">
+        <div class="nav-btn" id="navProfile">🎒<span class="label">Profile</span></div>
+        <div class="nav-btn" id="navShop">🛒<span class="label">Shop</span></div>
+        <div class="nav-btn" id="navAch">🏆<span class="label">Awards</span></div>
+        <div class="nav-btn" id="navSettings">⚙️<span class="label">Settings</span></div>
+      </div>
+    </div>
+  `;
+}
+function wireMenu(){
+  document.getElementById('btnStory').onclick = ()=>{ sfx.click(); goto('story-setup'); };
+  document.getElementById('btnCombat').onclick = ()=>{ sfx.click(); startBattle('combat'); };
+  document.getElementById('btnChallenge').onclick = ()=>{ sfx.click(); startBattle('challenge'); };
+  document.getElementById('btnLesson').onclick = ()=>{ sfx.click(); goto('lesson'); };
+  document.getElementById('navProfile').onclick = ()=>{ sfx.click(); goto('profile'); };
+  document.getElementById('navShop').onclick = ()=>{ sfx.click(); goto('shop'); };
+  document.getElementById('navAch').onclick = ()=>{ sfx.click(); goto('achievements'); };
+  document.getElementById('navSettings').onclick = ()=>{ sfx.click(); goto('settings'); };
+}
+function backButton(label){ return `<button class="back-link" id="backBtn">← ${label}</button>`; }
+function wireBack(){ const b=document.getElementById('backBtn'); if(b) b.onclick=()=>{ sfx.click(); goto('menu'); }; }
+
+/* ============================== STORY MODE ============================== */
+function renderStorySetup(){
+  const themeButtons = THEMES.map(t=>`
+    <button class="choice-chip ${ui.storySetup.theme===t.id?'selected':''}" data-theme="${t.id}">${t.label}<small>${t.sub}</small></button>
+  `).join('');
+  return `
+    <div class="frame">
+      ${backButton('เมนูหลัก')}
+      <h2 class="section-title pixel" style="font-size:12px;">📖 STORY MODE</h2>
+      <p style="text-align:center; color:var(--ink-dim); font-size:12.5px; margin-top:-8px;">ระดับภาษา: ${save.cefr} (แก้ไขได้ที่ Settings)</p>
+      <label style="font-size:12.5px; color:var(--ink-dim); display:block; margin:14px 0 8px;">เลือกธีมเรื่อง</label>
+      <div class="choice-row">${themeButtons}</div>
+      ${ui.story.error && ui.screen==='story-setup' ? `<div class="error-box">${esc(ui.story.error)}</div>` : ''}
+      <button class="primary-btn" id="startStoryBtn" ${ui.story.loading?'disabled':''}>${ui.story.loading?'กำลังสร้างฉากแรก…':'▶ เริ่มเนื้อเรื่อง'}</button>
+    </div>
+  `;
+}
+function wireStorySetup(){
+  document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>{ ui.storySetup.theme=b.dataset.theme; render(); });
+  document.getElementById('startStoryBtn').onclick = startStory;
+  const back=document.getElementById('backBtn'); if(back) back.onclick=()=>{ sfx.click(); goto('menu'); };
+}
+
+function buildStoryRules(){
+  const themeInfo = THEMES.find(t=>t.id===ui.storySetup.theme);
+  return `You are a Game Master running an English-learning text-based RPG for a Thai learner.
+SETTING: ${themeInfo.sub} theme.
+LANGUAGE LEVEL: CEFR ${save.cefr}. Use vocabulary and grammar strictly appropriate to this level.
+
+RULES FOR EVERY TURN:
+1. Write the next scene in English ONLY, about 60-120 words, vivid and a little tense, continuing logically from the player's last action.
+2. Provide exactly three fixed choices (A, B, C), short English sentences, matching the level.
+3. Provide 3 to 5 useful/difficult English words or short phrases from your scene text, each with a natural Thai translation.
+4. If the player's last message was a FREE-TYPED action (not A/B/C), check it for grammar mistakes. If mistakes exist, write a short polite correction in Thai in "grammarCorrection". If no mistakes, or if the player chose A/B/C, set "grammarCorrection" to null.
+5. Rarely, when narratively fitting, end the game with a win or loss.
+6. Draw the scene as retro pixel art: {"width":48,"height":27,"palette":[up to 16 hex colors],"rows":[27 strings of exactly 48 chars from "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", every cell filled, no transparency]}. Bold readable silhouettes, mood-appropriate palette. Never depict real people or copyrighted characters/brands.
+
+Respond with ONLY this JSON, no markdown fences, no extra text:
+{
+  "story": "string",
+  "pixelArt": {"width":48,"height":27,"palette":["#hex",...],"rows":["...48 chars...",...27 rows]},
+  "options": {"A":"string","B":"string","C":"string"},
+  "vocab": [{"word":"string","thai":"string"}, ...3 to 5],
+  "grammarCorrection": "string in Thai, or null",
+  "gameOver": false,
+  "gameOverReason": null
+}
+If the game ends, set "gameOver": true, "gameOverReason" to "win" or "lose", "options" may be {}.`;
+}
+function normalizeStoryScene(data){
+  return {
+    story: data.story || '',
+    pixelArt: validatePixelArt(data.pixelArt),
+    options: data.options || {},
+    vocab: Array.isArray(data.vocab) ? data.vocab.slice(0,5) : [],
+    grammarCorrection: data.grammarCorrection || null,
+    gameOver: !!data.gameOver,
+    gameOverReason: data.gameOverReason || null,
+  };
+}
+async function startStory(){
+  ui.story = { turns:[], scene:null, loading:true, streaming:'Thinking...', error:null, freeText:'', pending:null };
+  ui.screen = 'story-play';
+  render();
+  const rules = buildStoryRules();
+  ui.story.turns = [{ role:'user', content: rules + '\n\nBegin the adventure now with an exciting opening scene.' }];
+  try{
+    const data = await callClaude(ui.story.turns);
+    ui.story.turns.push({ role:'assistant', content: JSON.stringify(data) });
+    ui.story.scene = normalizeStoryScene(data);
+    onStoryScene(ui.story.scene);
+    ui.story.loading = false;
+    render();
+  }catch(e){
+    ui.story.loading = false;
+    ui.screen = 'story-setup';
+    ui.story.error = errorCopy(e);
+    render();
+  }
+}
+function onStoryScene(scene){
+  save.stats.scenesPlayed += 1;
+  addXp(6); addGold(2);
+  (scene.vocab||[]).forEach(v=>learnWord(v.word, v.thai));
+  const newly = checkAchievements();
+  persist();
+  newly.forEach(a=>showToast(`🏆 ปลดล็อกความสำเร็จ: ${a.name}`));
+}
+function renderStoryPlay(){
+  const scene = ui.story.scene;
+  const showStreamOnly = ui.story.loading && !scene;
+  let artHtml='', textHtml='', gameOverHtml='';
+  if(showStreamOnly){
+    artHtml = `<div class="scene-art placeholder">🎮 drawing pixel art…</div>`;
+    textHtml = `<div class="scene-text">${esc(ui.story.streaming || 'Thinking...')}</div>`;
+  } else if(scene){
+    artHtml = scene.pixelArt ? `<div class="scene-art"><canvas id="storyCanvas"></canvas></div>` : '';
+    textHtml = `<div class="scene-text">${esc(scene.story)}</div>`;
+    if(scene.gameOver){
+      gameOverHtml = `<div style="text-align:center; margin-bottom:14px;">
+        <span class="tag" style="background:${scene.gameOverReason==='win'?'var(--gem-green)':'var(--wrong)'}; color:#fff; padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700;">
+          ${scene.gameOverReason==='win' ? '🏆 THE END — Victory' : '☠ THE END — Defeat'}
+        </span></div>`;
+    }
+  }
+  let optionsHtml = '';
+  if(scene && !scene.gameOver){
+    const opts = scene.options||{};
+    optionsHtml = `<div>
+      ${['A','B','C'].map(k=>opts[k] ? `<button class="opt-btn" data-letter="${k}" ${ui.story.loading?'disabled':''}><span class="letter">${k}</span>${esc(opts[k])}</button>` : '').join('')}
+      <div class="free-input-row">
+        <input type="text" id="freeInput" placeholder="D. พิมพ์คำตอบของคุณเอง (English)…" value="${esc(ui.story.freeText)}" ${ui.story.loading?'disabled':''}/>
+        <button id="freeSubmit" ${ui.story.loading?'disabled':''}>ส่ง</button>
+      </div>
+    </div>`;
+  }
+  let statusHtml = (ui.story.loading && scene) ? `<div class="status-row"><div class="spinner"></div> กำลังแต่งเนื้อเรื่องต่อ…</div>` : '';
+  let errorHtml = ui.story.error ? `<div class="error-box">${esc(ui.story.error)}<br><button id="retryBtn">ลองอีกครั้ง</button></div>` : '';
+  let correctionHtml = (scene && scene.grammarCorrection) ? `<div class="correction-box"><b>[Grammar Correction]</b><br>${esc(scene.grammarCorrection)}</div>` : '';
+  let vocabHtml = '';
+  if(scene && scene.vocab && scene.vocab.length){
+    vocabHtml = `<div class="helper-card"><h3>📖 คำศัพท์น่ารู้</h3><ul class="vocab-list">
+      ${scene.vocab.map(v=>`<li><b>${esc(v.word)}</b><span>${esc(v.thai)}</span></li>`).join('')}
+    </ul>${correctionHtml}</div>`;
+  } else if(correctionHtml){ vocabHtml = `<div class="helper-card">${correctionHtml}</div>`; }
+
+  return `
+    <div class="frame">
+      ${backButton('เมนูหลัก')}
+      ${artHtml}${textHtml}${gameOverHtml}
+      ${statusHtml}${errorHtml}${optionsHtml}${vocabHtml}
+      ${scene && scene.gameOver ? `<button class="ghost-btn" id="restartStoryBtn">↺ เริ่มเรื่องใหม่</button>` : ''}
+    </div>
+  `;
+}
+function wireStoryPlay(){
+  document.getElementById('backBtn').onclick = ()=>{ sfx.click(); goto('menu'); };
+  document.querySelectorAll('.opt-btn').forEach(btn=>{
+    btn.onclick = ()=>{ sfx.click(); const letter=btn.dataset.letter; const text=ui.story.scene.options[letter]; runStoryAction({kind:'choice',letter,text}); };
+  });
+  const freeInput = document.getElementById('freeInput');
+  const freeSubmit = document.getElementById('freeSubmit');
+  if(freeInput){
+    freeInput.oninput = e=>{ ui.story.freeText = e.target.value; };
+    freeInput.onkeydown = e=>{ if(e.key==='Enter' && !ui.story.loading && ui.story.freeText.trim()) doFreeSubmit(); };
+  }
+  if(freeSubmit) freeSubmit.onclick = ()=>{ if(ui.story.freeText.trim()) doFreeSubmit(); };
+  const retryBtn = document.getElementById('retryBtn');
+  if(retryBtn) retryBtn.onclick = ()=>{ ui.story.error=null; if(ui.story.pending) runStoryAction(ui.story.pending); else startStory(); };
+  const restartBtn = document.getElementById('restartStoryBtn');
+  if(restartBtn) restartBtn.onclick = ()=>goto('story-setup');
+  const canvas = document.getElementById('storyCanvas');
+  if(canvas && ui.story.scene && ui.story.scene.pixelArt) drawPixelArt(canvas, ui.story.scene.pixelArt);
+}
+function doFreeSubmit(){
+  const text = ui.story.freeText.trim();
+  ui.story.freeText = '';
+  sfx.click();
+  runStoryAction({ kind:'free', text });
+}
+async function runStoryAction(action){
+  ui.story.pending = action;
+  ui.story.error = null;
+  ui.story.loading = true;
+  ui.story.streaming = 'Thinking...';
+  render();
+  const userMsg = action.kind==='choice'
+    ? `I choose option ${action.letter}: "${action.text}"`
+    : `My action (free-typed, please check grammar): "${action.text}"`;
+  ui.story.turns.push({ role:'user', content:userMsg });
+  try{
+    const data = await callClaude(ui.story.turns);
+    ui.story.turns.push({ role:'assistant', content: JSON.stringify(data) });
+    ui.story.scene = normalizeStoryScene(data);
+    onStoryScene(ui.story.scene);
+    ui.story.pending = null;
+    ui.story.loading = false;
+    render();
+  }catch(e){
+    ui.story.turns.pop();
+    ui.story.loading = false;
+    ui.story.error = errorCopy(e);
+    render();
+  }
+}
+
+/* ============================== BATTLE (COMBAT + CHALLENGE) ============================== */
+function buildBattleRules(mode){
+  const cefr = save.cefr;
+  if(mode === 'combat'){
+    return `You are designing ONE vocabulary battle for an English-learning RPG for a Thai learner at CEFR ${cefr} level.
+Invent an original (non-copyrighted) fantasy monster suitable for a light adventure game.
+Create exactly 8 multiple-choice vocabulary questions at CEFR ${cefr} level, increasing slightly in difficulty. Each question gives an English definition or short context clue (do NOT state the answer word itself), plus 4 options (A-D): one correct English word and three plausible same-difficulty distractors. For every option give: the word, a simple approximate pronunciation guide in slashes, and its Thai meaning.
+Also draw the monster as retro pixel art: {"width":48,"height":27,"palette":[up to 16 hex colors],"rows":[27 strings of exactly 48 characters from "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", every cell filled, no transparency]}. Bold, readable monster silhouette, moody palette. Never depict real people or copyrighted characters/brands.
+Respond with ONLY this JSON, no markdown fences, no extra text:
+{
+  "monsterName": "string",
+  "monsterArt": {"width":48,"height":27,"palette":["#hex",...],"rows":["...48 chars...",...27 rows]},
+  "questions": [
+    {"prompt":"string English definition/context clue","options":{"A":{"word":"string","pron":"/.../","thai":"string"},"B":{...},"C":{...},"D":{...}},"correct":"A"}
+    ... exactly 8 items
+  ]
+}`;
+  }
+  return `You are designing a TIMED VOCABULARY TRIAL (no monster, just a quiz) for an English-learning app for a Thai learner at CEFR ${cefr} level.
+Create exactly 8 multiple-choice vocabulary questions at CEFR ${cefr} level, increasing slightly in difficulty. Each question gives an English definition or short context clue (do NOT state the answer word itself), plus 4 options (A-D): one correct English word and three plausible same-difficulty distractors. For every option give: the word, a simple approximate pronunciation guide in slashes, and its Thai meaning.
+Respond with ONLY this JSON, no markdown fences, no extra text:
+{
+  "questions": [
+    {"prompt":"string English definition/context clue","options":{"A":{"word":"string","pron":"/.../","thai":"string"},"B":{...},"C":{...},"D":{...}},"correct":"A"}
+    ... exactly 8 items
+  ]
+}`;
+}
+function validateBattleData(data, mode){
+  if(!data || !Array.isArray(data.questions) || data.questions.length===0) return null;
+  const qs = data.questions.filter(q=>{
+    if(!q || typeof q.prompt!=='string') return false;
+    if(!q.options || !['A','B','C','D'].every(k=>q.options[k] && q.options[k].word)) return false;
+    if(!['A','B','C','D'].includes(q.correct)) return false;
+    return true;
+  });
+  if(qs.length===0) return null;
+  const out = { questions: qs };
+  if(mode === 'combat'){
+    out.monsterName = (typeof data.monsterName==='string' && data.monsterName.trim()) ? data.monsterName.trim() : 'Wild Grammaros';
+    out.monsterArt = validatePixelArt(data.monsterArt);
+  }
+  return out;
+}
+async function startBattle(mode){
+  ui.battle = { mode, loading:true, streaming:'Thinking...', error:null, data:null,
+    qIndex:0, playerHp:100, playerMaxHp:100, monsterHp:100, monsterMaxHp:100,
+    answered:null, correctCount:0, finished:false, timerLeft:0, timerHandle:null,
+    xpEarned:0, goldEarned:0 };
+  ui.screen = 'battle';
+  render();
+  try{
+    const rules = buildBattleRules(mode);
+    const data = await callClaude([{ role:'user', content: rules }]);
+    const clean = validateBattleData(data, mode);
+    if(!clean) throw { code:'invalid_json' };
+    ui.battle.data = clean;
+    ui.battle.loading = false;
+    if(mode==='challenge') startQuestionTimer();
+    render();
+  }catch(e){
+    ui.battle.loading = false;
+    ui.battle.error = errorCopy(e);
+    render();
+  }
+}
+function currentQuestion(){
+  const b = ui.battle;
+  return b.data && b.data.questions[b.qIndex];
+}
+function startQuestionTimer(){
+  clearInterval(ui.battle.timerHandle);
+  ui.battle.timerLeft = 15;
+  const bar = ()=>document.getElementById('timerBar');
+  ui.battle.timerHandle = setInterval(()=>{
+    ui.battle.timerLeft -= 0.2;
+    const el = bar();
+    if(el) el.style.width = Math.max(0,(ui.battle.timerLeft/15)*100) + '%';
+    if(ui.battle.timerLeft <= 0){
+      clearInterval(ui.battle.timerHandle);
+      if(!ui.battle.answered) answerQuestion(null);
+    }
+  }, 200);
+}
+function answerQuestion(letter){
+  const b = ui.battle;
+  if(b.answered) return;
+  clearInterval(b.timerHandle);
+  const q = currentQuestion();
+  const isCorrect = letter === q.correct;
+  b.answered = letter;
+  const correctOpt = q.options[q.correct];
+  learnWord(correctOpt.word, correctOpt.thai);
+  if(isCorrect){
+    sfx.correct();
+    b.correctCount += 1;
+    if(b.mode==='combat'){
+      const dmg = Math.ceil(b.monsterMaxHp / b.data.questions.length);
+      b.monsterHp = Math.max(0, b.monsterHp - dmg);
+    }
+  } else {
+    sfx.wrong();
+    if(b.mode==='combat'){
+      const dmg = Math.ceil(b.playerMaxHp / (b.data.questions.length + 2));
+      b.playerHp = Math.max(0, b.playerHp - dmg);
+    }
+  }
+  render();
+}
+function nextQuestion(){
+  const b = ui.battle;
+  if(b.mode==='combat' && (b.monsterHp<=0 || b.playerHp<=0)){
+    finishBattle(b.monsterHp<=0 ? 'win' : 'lose');
+    return;
+  }
+  b.qIndex += 1;
+  b.answered = null;
+  if(b.qIndex >= b.data.questions.length){
+    if(b.mode==='combat') finishBattle(b.monsterHp>b.playerHp ? 'win' : (b.monsterHp<=0?'win':'lose'));
+    else finishChallenge();
+    return;
+  }
+  render();
+  if(b.mode==='challenge') startQuestionTimer();
+}
+function finishBattle(result){
+  const b = ui.battle;
+  b.finished = true; b.result = result;
+  if(result==='win'){
+    sfx.victory();
+    const xp = 20 + b.correctCount*4;
+    const gold = 15 + b.correctCount*3;
+    b.xpEarned = xp; b.goldEarned = gold;
+    addXp(xp); addGold(gold);
+    save.stats.battlesWon += 1;
+  } else {
+    sfx.defeat();
+    b.xpEarned = 4; b.goldEarned = 0;
+    addXp(4);
+  }
+  persist();
+  b.newAch = checkAchievements();
+  render();
+}
+function finishChallenge(){
+  const b = ui.battle;
+  b.finished = true; b.result = 'done';
+  const xp = b.correctCount * 5;
+  const gold = b.correctCount * 2;
+  b.xpEarned = xp; b.goldEarned = gold;
+  addXp(xp); addGold(gold);
+  save.stats.challengesCompleted += 1;
+  persist();
+  sfx.correct();
+  b.newAch = checkAchievements();
+  render();
+}
+function renderBattle(){
+  const b = ui.battle;
+  if(b.loading){
+    return `<div class="frame">${backButton('เมนูหลัก')}
+      <div class="scene-art placeholder">${b.mode==='combat'?'🐉 summoning a monster…':'⏱️ preparing the trial…'}</div>
+      <div class="status-row"><div class="spinner"></div> กำลังสร้างคำถาม…</div>
+    </div>`;
+  }
+  if(b.error){
+    return `<div class="frame">${backButton('เมนูหลัก')}<div class="error-box">${esc(b.error)}<br><button id="retryBattleBtn">ลองอีกครั้ง</button></div></div>`;
+  }
+  if(b.finished){
+    let title, emoji;
+    if(b.mode==='combat'){
+      title = b.result==='win' ? `ชนะ ${esc(b.data.monsterName)}!` : 'พ่ายแพ้...';
+      emoji = b.result==='win' ? '🏆' : '💀';
+    } else {
+      title = 'จบการทดสอบเวลา!';
+      emoji = '⏱️';
+    }
+    return `<div class="frame">${backButton('เมนูหลัก')}
+      <div class="battle-result">
+        <div class="big-emoji">${emoji}</div>
+        <h3>${title}</h3>
+        <p style="color:var(--ink-dim); font-size:13px;">ตอบถูก ${b.correctCount}/${b.data.questions.length} ข้อ</p>
+        <div class="reward-row"><span>✨ XP +<b>${b.xpEarned}</b></span><span>💰 Gold +<b>${b.goldEarned}</b></span></div>
+        <button class="primary-btn" id="battleAgainBtn">↺ ${b.mode==='combat'?'ต่อสู้อีกครั้ง':'ทดสอบอีกครั้ง'}</button>
+        <button class="ghost-btn" id="battleMenuBtn">กลับเมนูหลัก</button>
+      </div>
+    </div>`;
+  }
+  const q = currentQuestion();
+  const total = b.data.questions.length;
+  let topHtml = '';
+  if(b.mode==='combat'){
+    topHtml = `
+      <div class="monster-art"><canvas id="monsterCanvas"></canvas></div>
+      <div class="vs-row">
+        <div class="fighter">
+          <div class="who"><div class="avatar-sm">${save.avatar}</div><div class="name">${esc(save.name)}</div></div>
+          <div class="bar-label"><span>HP</span><span>${b.playerHp}/${b.playerMaxHp}</span></div>
+          <div class="bar-track"><div class="bar-fill hp ${b.playerHp/b.playerMaxHp<0.3?'low':''}" style="width:${(b.playerHp/b.playerMaxHp)*100}%"></div></div>
+        </div>
+        <div class="fighter enemy">
+          <div class="who"><div class="avatar-sm">👹</div><div class="name">${esc(b.data.monsterName)}</div></div>
+          <div class="bar-label"><span>HP</span><span>${b.monsterHp}/${b.monsterMaxHp}</span></div>
+          <div class="bar-track"><div class="bar-fill enemy" style="width:${(b.monsterHp/b.monsterMaxHp)*100}%"></div></div>
+        </div>
+      </div>
+    `;
+  } else {
+    topHtml = `<p style="text-align:center; color:var(--ink-dim); font-size:12.5px;">⏱️ Timed Trial · ตอบให้ทันภายในเวลา</p>`;
+  }
+  const answered = b.answered;
+  const optionsHtml = ['A','B','C','D'].map(k=>{
+    const opt = q.options[k];
+    let cls = 'answer-card';
+    if(answered){
+      if(k===q.correct) cls += ' correct';
+      else if(k===answered) cls += ' wrong';
+    }
+    return `<button class="${cls}" data-letter="${k}" ${answered?'disabled':''}>
+      <div class="aword">${esc(k)}) ${esc(opt.word)}</div>
+      <div class="apron">${esc(opt.pron||'')}</div>
+      <div class="athai">${esc(opt.thai||'')}</div>
+    </button>`;
+  }).join('');
+  const timerHtml = (b.mode==='challenge' && !answered) ? `<div class="timer-track"><div class="bar-fill timer" id="timerBar" style="width:100%"></div></div>` : '';
+  return `<div class="frame">
+    ${backButton('เมนูหลัก')}
+    ${topHtml}
+    <div class="q-card">
+      <div class="q-counter">คำถามที่ ${b.qIndex+1} / ${total}</div>
+      <div class="q-prompt">${esc(q.prompt)}</div>
+      ${timerHtml}
+    </div>
+    <div class="answer-grid">${optionsHtml}</div>
+    ${answered ? `<button class="primary-btn" id="nextQBtn" style="margin-top:14px;">ต่อไป →</button>` : ''}
+  </div>`;
+}
+function wireBattle(){
+  const back = document.getElementById('backBtn');
+  if(back) back.onclick = ()=>{ sfx.click(); clearInterval(ui.battle.timerHandle); goto('menu'); };
+  const retry = document.getElementById('retryBattleBtn');
+  if(retry) retry.onclick = ()=>startBattle(ui.battle.mode);
+  document.querySelectorAll('.answer-card').forEach(btn=>{
+    btn.onclick = ()=>answerQuestion(btn.dataset.letter);
+  });
+  const nextBtn = document.getElementById('nextQBtn');
+  if(nextBtn) nextBtn.onclick = ()=>{ sfx.click(); nextQuestion(); };
+  const again = document.getElementById('battleAgainBtn');
+  if(again) again.onclick = ()=>{ sfx.click(); startBattle(ui.battle.mode); };
+  const toMenu = document.getElementById('battleMenuBtn');
+  if(toMenu) toMenu.onclick = ()=>{ sfx.click(); goto('menu'); };
+  const mCanvas = document.getElementById('monsterCanvas');
+  if(mCanvas && ui.battle.data && ui.battle.data.monsterArt) drawPixelArt(mCanvas, ui.battle.data.monsterArt);
+  if(ui.battle.newAch && ui.battle.newAch.length){
+    ui.battle.newAch.forEach(a=>showToast(`🏆 ปลดล็อกความสำเร็จ: ${a.name}`));
+    ui.battle.newAch = [];
+  }
+}
+
+/* ============================== LESSON LIBRARY ============================== */
+function renderLesson(){
+  const words = Object.values(save.vocab).sort((a,b)=>b.count-a.count);
+  const list = words.length ? words.map((w,i)=>`
+    <div class="word-card ${ui.lesson.flipped.has(i)?'flipped':''}" data-idx="${i}">
+      <div class="front"><span class="w">${esc(w.word)}</span><span class="count">พบ ${w.count} ครั้ง</span></div>
+      <div class="thai">${esc(w.thai||'—')}</div>
+    </div>`).join('')
+    : `<div class="empty-note">ยังไม่มีคำศัพท์ในคลัง<br>ลองเล่นโหมด Story หรือ Combat ดูนะ!</div>`;
+  return `<div class="frame">
+    ${backButton('เมนูหลัก')}
+    <h2 class="section-title pixel" style="font-size:12px;">📚 LESSON MODE</h2>
+    <p style="text-align:center; color:var(--ink-dim); font-size:12px; margin-top:-8px;">แตะคำเพื่อดูคำแปล</p>
+    <div style="margin-top:14px;">${list}</div>
+  </div>`;
+}
+function wireLesson(){
+  document.getElementById('backBtn').onclick = ()=>{ sfx.click(); goto('menu'); };
+  document.querySelectorAll('.word-card').forEach(card=>{
+    card.onclick = ()=>{
+      const idx = parseInt(card.dataset.idx,10);
+      if(ui.lesson.flipped.has(idx)) ui.lesson.flipped.delete(idx); else ui.lesson.flipped.add(idx);
+      card.classList.toggle('flipped');
+    };
+  });
+}
+
+/* ============================== ACHIEVEMENTS ============================== */
+function renderAchievements(){
+  const cards = ACHIEVEMENTS.map(a=>{
+    const unlocked = !!save.achievements[a.id];
+    return `<div class="ach-card ${unlocked?'unlocked':''}">
+      <div class="ico">${a.ico}</div>
+      <div class="an">${esc(a.name)}</div>
+      <div class="ad">${esc(a.desc)}</div>
+    </div>`;
+  }).join('');
+  return `<div class="frame">
+    ${backButton('เมนูหลัก')}
+    <h2 class="section-title pixel" style="font-size:12px;">🏆 ACHIEVEMENTS</h2>
+    <div class="ach-grid" style="margin-top:14px;">${cards}</div>
+  </div>`;
+}
+
+/* ============================== SHOP ============================== */
+function renderShop(){
+  const items = AVATARS_SHOP.map(item=>{
+    const owned = save.ownedAvatars.includes(item.emoji);
+    return `<div class="shop-item">
+      <div class="ico">${item.emoji}</div>
+      <div class="info"><div class="n">${esc(item.name)}</div><div class="p">${owned?'มีแล้ว':'💰 '+item.cost}</div></div>
+      <button data-id="${item.id}" class="${owned?'owned':''}" ${owned?'disabled':(save.gold<item.cost?'disabled':'')}>${owned?'✓':'ซื้อ'}</button>
+    </div>`;
+  }).join('');
+  return `<div class="frame">
+    ${backButton('เมนูหลัก')}
+    <h2 class="section-title pixel" style="font-size:12px;">🛒 SHOP</h2>
+    <p style="text-align:center; color:var(--gold-bright); font-size:13px; margin-top:-8px;">💰 คุณมีทอง ${save.gold}</p>
+    <div style="margin-top:14px;">${items}</div>
+  </div>`;
+}
+function wireShop(){
+  document.getElementById('backBtn').onclick = ()=>{ sfx.click(); goto('menu'); };
+  document.querySelectorAll('.shop-item button').forEach(btn=>{
+    if(btn.disabled) return;
+    btn.onclick = ()=>{
+      const item = AVATARS_SHOP.find(i=>i.id===btn.dataset.id);
+      if(!item || save.gold < item.cost) return;
+      save.gold -= item.cost;
+      save.ownedAvatars.push(item.emoji);
+      persist();
+      sfx.coin();
+      showToast(`ปลดล็อก ${item.name} แล้ว!`);
+      render();
+    };
+  });
+}
+
+/* ============================== PROFILE ============================== */
+function renderProfile(){
+  const avatars = save.ownedAvatars.map(a=>`
+    <button class="choice-chip ${save.avatar===a?'selected':''}" data-pick="${a}" style="font-size:22px; flex:0 0 auto; min-width:52px;">${a}</button>
+  `).join('');
+  return `<div class="frame">
+    ${backButton('เมนูหลัก')}
+    <h2 class="section-title pixel" style="font-size:12px;">🎒 PROFILE</h2>
+    <div class="player-card" style="justify-content:center; margin:16px 0;">
+      <div class="avatar-ring" style="width:80px; height:80px; font-size:40px;">${save.avatar}</div>
+    </div>
+    <p style="text-align:center; font-weight:700; margin-bottom:4px;">${esc(save.name)}</p>
+    <p style="text-align:center; color:var(--ink-dim); font-size:12.5px; margin-bottom:16px;">Level ${save.level} · ${Object.keys(save.vocab).length} คำศัพท์ที่เรียนแล้ว</p>
+    <label style="font-size:12.5px; color:var(--ink-dim); display:block; margin-bottom:8px;">เลือกตัวละคร (ที่ปลดล็อกแล้ว)</label>
+    <div class="choice-row">${avatars}</div>
+    <button class="ghost-btn" id="toShopBtn">🛒 ไปที่ร้านค้าเพื่อปลดล็อกเพิ่ม</button>
+  </div>`;
+}
+function wireProfile(){
+  document.getElementById('backBtn').onclick = ()=>{ sfx.click(); goto('menu'); };
+  document.querySelectorAll('[data-pick]').forEach(b=>{
+    b.onclick = ()=>{ sfx.click(); save.avatar = b.dataset.pick; persist(); render(); };
+  });
+  document.getElementById('toShopBtn').onclick = ()=>{ sfx.click(); goto('shop'); };
+}
+
+/* ============================== SETTINGS ============================== */
+function renderSettings(){
+  const levelChips = CEFR_LEVELS.map(l=>`
+    <button class="choice-chip ${save.cefr===l.id?'selected':''}" data-cefr="${l.id}">${l.id}<small>${l.name}</small></button>
+  `).join('');
+  return `<div class="frame">
+    ${backButton('เมนูหลัก')}
+    <h2 class="section-title pixel" style="font-size:12px;">⚙️ SETTINGS</h2>
+
+    <div class="stone-panel" style="margin-top:14px;">
+      <div class="setting-row">
+        <span class="lbl">ระดับภาษาอังกฤษ (CEFR)</span>
+        <div class="choice-row" style="margin-bottom:0;">${levelChips}</div>
+      </div>
+      <div class="setting-row" style="margin-bottom:0;">
+        <span class="lbl">ระดับเสียงเอฟเฟกต์ (SFX): ${save.sfxVolume}%</span>
+        <input type="range" id="sfxRange" min="0" max="100" value="${save.sfxVolume}">
+      </div>
+    </div>
+
+    <div class="stone-panel" style="margin-top:14px;">
+      <span class="lbl">การจัดการข้อมูล</span>
+      <button class="danger-btn" id="resetBtn">⚠ ล้างความคืบหน้าทั้งหมด</button>
+    </div>
+  </div>`;
+}
+function wireSettings(){
+  document.getElementById('backBtn').onclick = ()=>{ sfx.click(); goto('menu'); };
+  document.querySelectorAll('[data-cefr]').forEach(b=>{
+    b.onclick = ()=>{ sfx.click(); save.cefr = b.dataset.cefr; persist(); render(); };
+  });
+  document.getElementById('sfxRange').oninput = e=>{
+    save.sfxVolume = parseInt(e.target.value,10); persist();
+    document.querySelector('.setting-row .lbl').textContent = '';
+    render();
+    sfx.click();
+  };
+  document.getElementById('resetBtn').onclick = ()=>{
+    if(confirm('ล้างความคืบหน้าทั้งหมด (เลเวล ทอง คำศัพท์ ความสำเร็จ) แน่ใจหรือไม่?')){
+      localStorage.removeItem(SAVE_KEY);
+      save = defaultSave();
+      goto('onboarding');
+    }
+  };
+}
+
+/* ============================== START ============================== */
+render();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
